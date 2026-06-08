@@ -38,6 +38,8 @@ export type QueryReceipt = {
   answerClass: string;
   boundaryNote: string;
   freshnessDisclosureApplied: boolean;
+  // per-result disclosure labels (EC-02 exception: date-aware instead of hard block)
+  disclosures: { corpusRecordId: string; note: string }[];
 };
 
 function normalize(q: string): string {
@@ -56,6 +58,32 @@ function normalize(q: string): string {
 
 function tokenize(q: string): string[] {
   return normalize(q).split(' ').filter(t => t.length > 1);
+}
+
+// EC-02 exception granted 2026-06-08: date-aware disclaimer instead of hard block.
+// not_yet_in_force → DIRECT_CITED_ANSWER + disclosure label (law promulgated but
+// effective date not yet reached — normal VN legislative practice).
+// repealed / unknown → SUMMARY_WITH_SOURCE (citing a dead law is a real risk).
+export function freshnessAnswerClass(freshnessStatus: string): string {
+  if (freshnessStatus === 'repealed' || freshnessStatus === 'unknown') return 'SUMMARY_WITH_SOURCE';
+  return 'DIRECT_CITED_ANSWER';
+}
+
+export function freshnessDisclosureNote(freshnessStatus: string, effectiveDate: string | null): string {
+  switch (freshnessStatus) {
+    case 'not_yet_in_force':
+      return effectiveDate
+        ? `Văn bản có hiệu lực từ ${effectiveDate} — chưa áp dụng được trước ngày đó.`
+        : 'Văn bản chưa có hiệu lực — kiểm tra ngày hiệu lực trước khi áp dụng.';
+    case 'amended':
+      return 'Văn bản đã được sửa đổi — kiểm tra phiên bản mới nhất trước khi áp dụng.';
+    case 'repealed':
+      return 'Văn bản đã hết hiệu lực — không còn giá trị pháp lý.';
+    case 'unknown':
+      return 'Trạng thái hiệu lực chưa xác định — xác minh trước khi sử dụng.';
+    default:
+      return '';
+  }
 }
 
 export function searchCorpus(
@@ -117,6 +145,7 @@ export function searchCorpus(
       answerClass: 'ESCALATE_OR_ABSTAIN',
       boundaryNote: 'No corpus records match filters or query is empty.',
       freshnessDisclosureApplied: false,
+      disclosures: [],
     };
     logQuery(db, receiptId, 'search', queryText, normalizedQuery, 'ESCALATE_OR_ABSTAIN', 0, 0, receipt);
     return { results: [], receipt };
@@ -164,7 +193,8 @@ export function searchCorpus(
     effectiveDate: record.effective_date,
     freshnessStatus: record.freshness_status,
     jurisdiction: record.jurisdiction,
-    answerClass: chunk.answer_class ?? record.answer_class,
+    // EC-02 exception: date-aware answerClass instead of hard SUMMARY_WITH_SOURCE block
+    answerClass: freshnessAnswerClass(record.freshness_status),
     chunkId: chunk.chunk_id,
     chunkText: chunk.chunk_text.slice(0, 500),
     articleRef: chunk.article_ref,
@@ -172,10 +202,13 @@ export function searchCorpus(
     score,
   }));
 
-  const hasFreshnessWarn = results.some(r =>
-    r.freshnessStatus === 'amended' || r.freshnessStatus === 'repealed' || r.freshnessStatus === 'not_yet_in_force'
-  );
+  // per-result disclosure notes (shown inline in UI per result card)
+  const resultDisclosures = results.map(r => ({
+    corpusRecordId: r.corpusRecordId,
+    note: freshnessDisclosureNote(r.freshnessStatus, r.effectiveDate),
+  })).filter(d => d.note !== '');
 
+  const hasFreshnessWarn = resultDisclosures.length > 0;
   const dominantAnswerClass = results[0]?.answerClass ?? 'SUMMARY_WITH_SOURCE';
 
   const citations = results.slice(0, 3).map(r => ({
@@ -194,9 +227,10 @@ export function searchCorpus(
     citations,
     answerClass: dominantAnswerClass,
     boundaryNote: hasFreshnessWarn
-      ? 'One or more results have amended/not-yet-in-force status. Verify before relying on them.'
-      : 'Results from local corpus only.',
+      ? resultDisclosures.map(d => d.note).join(' | ')
+      : 'Kết quả từ corpus nội bộ.',
     freshnessDisclosureApplied: hasFreshnessWarn,
+    disclosures: resultDisclosures,
   };
 
   logQuery(db, receiptId, 'search', queryText, normalizedQuery, dominantAnswerClass, results.length, results.length, receipt);
