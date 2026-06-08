@@ -85,6 +85,12 @@ function migrate(db: Database.Database) {
     CREATE INDEX IF NOT EXISTS idx_corpus_doctype ON corpus_records(document_type);
     CREATE INDEX IF NOT EXISTS idx_query_log_created ON query_log(created_at DESC);
   `);
+
+  // additive migration: updated_at column (idempotent)
+  const cols = (db.prepare("PRAGMA table_info(corpus_records)").all() as { name: string }[]).map(c => c.name);
+  if (!cols.includes('updated_at')) {
+    db.exec(`ALTER TABLE corpus_records ADD COLUMN updated_at TEXT`);
+  }
 }
 
 export type DbCorpusRecord = {

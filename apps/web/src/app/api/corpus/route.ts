@@ -10,11 +10,14 @@ export async function GET(req: NextRequest) {
     const sensitivity = url.searchParams.get('sensitivity');
     const q = url.searchParams.get('q');
 
+    const flaggedOnly = url.searchParams.get('flaggedOnly') === '1';
+
     const conditions: string[] = ["processing_status != 'error'"];
     const params: unknown[] = [];
 
     if (doctype) { conditions.push('document_type = ?'); params.push(doctype); }
     if (freshness) { conditions.push('freshness_status = ?'); params.push(freshness); }
+    else if (flaggedOnly) { conditions.push("freshness_status IN ('amended','repealed','not_yet_in_force','unknown')"); }
     if (sensitivity) { conditions.push('sensitivity = ?'); params.push(sensitivity); }
     if (q) { conditions.push('(file_name LIKE ? OR issuing_body LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
 
@@ -23,7 +26,8 @@ export async function GET(req: NextRequest) {
     const records = db.prepare(`
       SELECT id, file_name, document_type, issuing_body, effective_date,
              freshness_status, sensitivity, processing_status, jurisdiction,
-             authority_level, answer_class, topic_tags, imported_at
+             authority_level, answer_class, topic_tags, imported_at,
+             COALESCE(updated_at, imported_at) as updated_at
       FROM corpus_records ${where}
       ORDER BY imported_at DESC
       LIMIT 200
@@ -58,6 +62,29 @@ export async function GET(req: NextRequest) {
         flagged: stats.amended + stats.repealed,
       },
     });
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const { id, freshnessStatus, note } = await req.json();
+    if (!id || !freshnessStatus) return NextResponse.json({ error: 'id and freshnessStatus required' }, { status: 400 });
+    const valid = ['effective', 'not_yet_in_force', 'amended', 'repealed', 'unknown'];
+    if (!valid.includes(freshnessStatus)) return NextResponse.json({ error: 'invalid freshnessStatus' }, { status: 400 });
+    const db = getDb();
+    const now = new Date().toISOString();
+    db.prepare(`
+      UPDATE corpus_records SET freshness_status = ?, updated_at = ?
+      WHERE id = ?
+    `).run(freshnessStatus, now, id);
+    if (note) {
+      db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`).run(
+        `freshness_note_${id}`, JSON.stringify({ note, updatedAt: now })
+      );
+    }
+    return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
