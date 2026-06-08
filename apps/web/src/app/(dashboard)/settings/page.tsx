@@ -20,16 +20,32 @@ function SetRow({ label, sub, children }: { label: string; sub?: string; childre
   );
 }
 
-const ANTHROPIC_MODELS = [
-  ['claude-haiku-4-5-20251001', 'Haiku 4.5 — nhanh, rẻ'],
-  ['claude-sonnet-4-6', 'Sonnet 4.6 — cân bằng'],
-  ['claude-opus-4-8', 'Opus 4.8 — mạnh nhất'],
-];
-const OPENAI_MODELS = [
-  ['gpt-4o-mini', 'GPT-4o mini'],
-  ['gpt-4o', 'GPT-4o'],
-  ['gpt-4-turbo', 'GPT-4 Turbo'],
-];
+const PROVIDER_MODELS: Record<string, [string, string][]> = {
+  openai: [
+    ['gpt-4o-mini',  'GPT-4o mini — nhanh, rẻ'],
+    ['gpt-4o',       'GPT-4o — mạnh'],
+    ['gpt-4-turbo',  'GPT-4 Turbo'],
+  ],
+  deepseek: [
+    ['deepseek-chat',    'DeepSeek Chat — giá rất rẻ'],
+    ['deepseek-reasoner','DeepSeek Reasoner'],
+  ],
+  alibaba: [
+    ['qwen-plus',        'Qwen Plus — cân bằng'],
+    ['qwen-max',         'Qwen Max — mạnh nhất'],
+    ['qwen-turbo',       'Qwen Turbo — nhanh'],
+  ],
+  anthropic: [
+    ['claude-haiku-4-5-20251001', 'Haiku 4.5 — nhanh, rẻ'],
+    ['claude-sonnet-4-6',         'Sonnet 4.6 — cân bằng'],
+    ['claude-opus-4-8',           'Opus 4.8 — mạnh nhất'],
+  ],
+  ollama: [
+    ['llama3',    'Llama 3'],
+    ['mistral',   'Mistral'],
+    ['gemma3',    'Gemma 3'],
+  ],
+};
 
 export default function SettingsPage() {
   const { t, lang, setLang, theme, setTheme } = useApp();
@@ -106,7 +122,7 @@ export default function SettingsPage() {
     }
   };
 
-  const modelOptions = provider === 'openai' ? OPENAI_MODELS : ANTHROPIC_MODELS;
+  const modelOptions = PROVIDER_MODELS[provider] ?? PROVIDER_MODELS.openai;
 
   return (
     <div className="anim-up" style={{ maxWidth: 760, margin: '0 auto' }}>
@@ -147,15 +163,35 @@ export default function SettingsPage() {
       {tab === 'llm' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
+          {/* env keys detected banner */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 9, background: 'var(--green-bg)', border: '1px solid color-mix(in oklch, var(--green-solid) 24%, transparent)' }}>
+            <Icon name="shieldCheck" size={15} style={{ color: 'var(--green-text)', flex: 'none' }} />
+            <span style={{ fontSize: 12.5, color: 'var(--green-text)', fontWeight: 500 }}>
+              API keys đã được load từ <code style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5 }}>.env.local</code>
+              {' '}— OpenAI, DeepSeek, Alibaba sẵn sàng. Settings DB sẽ override nếu bạn nhập key mới.
+            </span>
+          </div>
+
           {/* provider selector */}
           <div className="card" style={{ padding: 20 }}>
             <span className="label-cap" style={{ display: 'block', marginBottom: 12 }}>{t('set.llm.provider')}</span>
-            <div style={{ display: 'flex', gap: 10 }}>
-              {([['anthropic', 'Anthropic', 'Claude'], ['openai', 'OpenAI', 'GPT / compatible'], ['ollama', 'Ollama', 'Local model']] as [string, string, string][]).map(([id, lb, sub]) => (
-                <button key={id} type="button" onClick={() => { setProvider(id); setModel(id === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5-20251001'); }}
-                  className="card" style={{ flex: 1, padding: '13px 10px', cursor: 'pointer', textAlign: 'center', borderColor: provider === id ? 'var(--accent)' : 'var(--border)', boxShadow: provider === id ? '0 0 0 3px var(--accent-soft)' : 'none', border: '1px solid', fontFamily: 'var(--font-sans)', background: 'var(--surface)', transition: 'all 0.16s' }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: provider === id ? 'var(--accent-text)' : 'var(--text)' }}>{lb}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>{sub}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+              {([
+                ['openai',    'OpenAI',    'GPT-4o'],
+                ['deepseek',  'DeepSeek',  'Giá rẻ nhất'],
+                ['alibaba',   'Alibaba',   'Qwen'],
+                ['anthropic', 'Anthropic', 'Claude'],
+                ['ollama',    'Ollama',    'Local'],
+              ] as [string, string, string][]).map(([id, lb, sub]) => (
+                <button key={id} type="button"
+                  onClick={() => {
+                    setProvider(id);
+                    setModel((PROVIDER_MODELS[id] ?? PROVIDER_MODELS.openai)[0][0]);
+                    setTestResult(null);
+                  }}
+                  className="card" style={{ padding: '12px 8px', cursor: 'pointer', textAlign: 'center', borderColor: provider === id ? 'var(--accent)' : 'var(--border)', boxShadow: provider === id ? '0 0 0 3px var(--accent-soft)' : 'none', border: '1px solid', fontFamily: 'var(--font-sans)', background: 'var(--surface)', transition: 'all 0.16s' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: provider === id ? 'var(--accent-text)' : 'var(--text)' }}>{lb}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>{sub}</div>
                 </button>
               ))}
             </div>
@@ -197,12 +233,13 @@ export default function SettingsPage() {
               </select>
             </div>
 
-            {/* base URL (Ollama / custom) */}
-            {(provider === 'ollama' || provider === 'openai') && (
+            {/* base URL — shown for Ollama always, others as optional override */}
+            {provider === 'ollama' && (
               <div>
-                <span className="label-cap" style={{ display: 'block', marginBottom: 8 }}>Base URL {provider === 'ollama' ? '(Ollama endpoint)' : '(optional override)'}</span>
-                <input className="field" type="url" value={baseUrl} onChange={e => setBaseUrl(e.target.value)}
-                  placeholder={provider === 'ollama' ? 'http://localhost:11434' : 'https://api.openai.com'} />
+                <span className="label-cap" style={{ display: 'block', marginBottom: 8 }}>Ollama endpoint</span>
+                <input className="field" type="url" value={baseUrl || 'http://localhost:11434'}
+                  onChange={e => setBaseUrl(e.target.value)}
+                  placeholder="http://localhost:11434" />
               </div>
             )}
 
