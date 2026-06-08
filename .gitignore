@@ -1,0 +1,30 @@
+# Internal governance / build-control docs (not for public repo)
+CODEX_*.md
+CVF_*.md
+CLAUDE_*.md
+
+# Prototype source files (already ported to apps/)
+app.html
+app.jsx
+landing.html
+tweaks-panel.jsx
+components/
+styles/
+data/
+data_input/
+scripts/
+
+# Node
+node_modules/
+.next/
+out/
+build/
+
+# Env
+.env
+.env.local
+.env*.local
+
+# OS
+.DS_Store
+Thumbs.db
