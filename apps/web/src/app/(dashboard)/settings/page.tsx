@@ -22,20 +22,28 @@ function SetRow({ label, sub, children }: { label: string; sub?: string; childre
 
 const PROVIDER_MODELS: Record<string, [string, string][]> = {
   openai: [
-    ['gpt-4o-mini',  'GPT-4o mini — nhanh, rẻ'],
-    ['gpt-4o',       'GPT-4o — mạnh'],
-    ['gpt-4-turbo',  'GPT-4 Turbo'],
+    ['gpt-4o-mini',   'GPT-4o mini — nhanh, rẻ'],
+    ['gpt-4o',        'GPT-4o — mạnh'],
+    ['o3-mini',       'o3 mini — reasoning'],
+    ['gpt-4-turbo',   'GPT-4 Turbo'],
+  ],
+  gemini: [
+    ['gemini-2.0-flash',         'Gemini 2.0 Flash — nhanh, free'],
+    ['gemini-2.5-flash-preview-05-20', 'Gemini 2.5 Flash — thinking'],
+    ['gemini-2.5-pro-preview-06-05',   'Gemini 2.5 Pro — mạnh nhất'],
+    ['gemini-1.5-flash',         'Gemini 1.5 Flash'],
+    ['gemini-1.5-pro',           'Gemini 1.5 Pro'],
   ],
   deepseek: [
-    ['deepseek-chat',    'DeepSeek Chat — giá rất rẻ'],
-    ['deepseek-reasoner','DeepSeek Reasoner'],
+    ['deepseek-chat',     'DeepSeek Chat — giá rất rẻ'],
+    ['deepseek-reasoner', 'DeepSeek Reasoner — R1'],
   ],
   alibaba: [
-    ['qwen3.6-35b-a3b',         'Qwen3.6 35B — 7.8s (khuyên dùng)'],
-    ['deepseek-v4-flash',       'DeepSeek V4 Flash — 9.4s'],
-    ['qwen3.6-flash-2026-04-16','Qwen3.6 Flash — 9.5s'],
-    ['qwen3.7-plus',            'Qwen3.7 Plus — mạnh nhất, 22s'],
-    ['qwen-turbo',              'Qwen Turbo — 2.9s (nhanh, kém chính xác)'],
+    ['qwen3.6-35b-a3b',          'Qwen3.6 35B — khuyên dùng'],
+    ['deepseek-v4-flash',        'DeepSeek V4 Flash'],
+    ['qwen3.6-flash-2026-04-16', 'Qwen3.6 Flash'],
+    ['qwen3.7-plus',             'Qwen3.7 Plus — mạnh nhất'],
+    ['qwen-turbo',               'Qwen Turbo — nhanh nhất'],
   ],
   anthropic: [
     ['claude-haiku-4-5-20251001', 'Haiku 4.5 — nhanh, rẻ'],
@@ -43,9 +51,10 @@ const PROVIDER_MODELS: Record<string, [string, string][]> = {
     ['claude-opus-4-8',           'Opus 4.8 — mạnh nhất'],
   ],
   ollama: [
-    ['llama3',    'Llama 3'],
-    ['mistral',   'Mistral'],
-    ['gemma3',    'Gemma 3'],
+    ['llama3',   'Llama 3'],
+    ['mistral',  'Mistral'],
+    ['gemma3',   'Gemma 3'],
+    ['qwen2.5',  'Qwen 2.5'],
   ],
 };
 
@@ -177,13 +186,14 @@ export default function SettingsPage() {
           {/* provider selector */}
           <div className="card" style={{ padding: 20 }}>
             <span className="label-cap" style={{ display: 'block', marginBottom: 12 }}>{t('set.llm.provider')}</span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {([
                 ['openai',    'OpenAI',    'GPT-4o'],
-                ['deepseek',  'DeepSeek',  'Giá rẻ nhất'],
-                ['alibaba',   'Alibaba',   'Qwen'],
+                ['gemini',    'Gemini',    'Google AI'],
                 ['anthropic', 'Anthropic', 'Claude'],
-                ['ollama',    'Ollama',    'Local'],
+                ['deepseek',  'DeepSeek',  'Giá rẻ nhất'],
+                ['alibaba',   'Alibaba',   'Qwen / free tier'],
+                ['ollama',    'Ollama',    'Local / offline'],
               ] as [string, string, string][]).map(([id, lb, sub]) => (
                 <button key={id} type="button"
                   onClick={() => {

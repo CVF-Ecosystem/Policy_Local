@@ -3,12 +3,12 @@ import { getDb } from '@/lib/db';
 import { searchCorpus } from '@/lib/search';
 import crypto from 'crypto';
 
-// Provider configs — all use OpenAI-compatible chat/completions endpoint
 const PROVIDER_DEFAULTS: Record<string, { baseUrl: string; defaultModel: string }> = {
   openai:   { baseUrl: 'https://api.openai.com',           defaultModel: 'gpt-4o-mini' },
   deepseek: { baseUrl: 'https://api.deepseek.com',         defaultModel: 'deepseek-chat' },
-  alibaba:  { baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode', defaultModel: 'qwen-plus' },
+  alibaba:  { baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode', defaultModel: 'qwen3.6-35b-a3b' },
   anthropic:{ baseUrl: '',                                 defaultModel: 'claude-haiku-4-5-20251001' },
+  gemini:   { baseUrl: 'https://generativelanguage.googleapis.com', defaultModel: 'gemini-2.0-flash' },
   ollama:   { baseUrl: 'http://localhost:11434',           defaultModel: 'llama3' },
 };
 
@@ -23,12 +23,12 @@ function resolveConfig(dbCfg: Record<string, string>): LLMConfig | null {
     if (provider === 'openai')    apiKey = process.env.OPENAI_API_KEY || '';
     if (provider === 'deepseek')  apiKey = process.env.DEEPSEEK_API_KEY || '';
     if (provider === 'alibaba')   apiKey = process.env.ALIBABA_API_KEY || process.env.DASHSCOPE_API_KEY || '';
+    if (provider === 'gemini')    apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '';
   }
   if (!apiKey) return null;
 
   const defaults = PROVIDER_DEFAULTS[provider] ?? PROVIDER_DEFAULTS.openai;
   const model   = dbCfg.llm_model   || process.env.POLICYLOCAL_DEFAULT_MODEL || defaults.defaultModel;
-  // Alibaba uses workspace-specific endpoint from env
   const baseUrl = dbCfg.llm_base_url
     || (provider === 'alibaba' ? process.env.ALIBABA_BASE_URL || defaults.baseUrl : defaults.baseUrl);
 
@@ -110,8 +110,28 @@ async function callOpenAICompatible(cfg: LLMConfig, systemPrompt: string, userMe
   return data.choices[0]?.message?.content || '';
 }
 
+async function callGemini(cfg: LLMConfig, systemPrompt: string, userMessage: string): Promise<string> {
+  const url = `${cfg.baseUrl}/v1beta/models/${cfg.model}:generateContent?key=${cfg.apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+      generationConfig: { maxOutputTokens: 1024 },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({})) as { error?: { message?: string } };
+    throw new Error(`Gemini ${res.status}: ${err?.error?.message || res.statusText}`);
+  }
+  const data = await res.json() as { candidates: { content: { parts: { text: string }[] } }[] };
+  return data.candidates?.[0]?.content?.parts?.map(p => p.text).join('') || '';
+}
+
 async function callLLM(cfg: LLMConfig, systemPrompt: string, userMessage: string): Promise<string> {
   if (cfg.provider === 'anthropic') return callAnthropic(cfg, systemPrompt, userMessage);
+  if (cfg.provider === 'gemini')    return callGemini(cfg, systemPrompt, userMessage);
   return callOpenAICompatible(cfg, systemPrompt, userMessage);
 }
 
