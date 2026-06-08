@@ -111,10 +111,10 @@ async function callOpenAICompatible(cfg: LLMConfig, systemPrompt: string, userMe
 }
 
 async function callGemini(cfg: LLMConfig, systemPrompt: string, userMessage: string): Promise<string> {
-  const url = `${cfg.baseUrl}/v1beta/models/${cfg.model}:generateContent?key=${cfg.apiKey}`;
+  const url = `${cfg.baseUrl}/v1beta/models/${cfg.model}:generateContent`;
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.apiKey },
     body: JSON.stringify({
       system_instruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: userMessage }] }],
