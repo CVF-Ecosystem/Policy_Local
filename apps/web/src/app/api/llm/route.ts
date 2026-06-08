@@ -27,8 +27,10 @@ function resolveConfig(dbCfg: Record<string, string>): LLMConfig | null {
   if (!apiKey) return null;
 
   const defaults = PROVIDER_DEFAULTS[provider] ?? PROVIDER_DEFAULTS.openai;
-  const model  = dbCfg.llm_model  || process.env.POLICYLOCAL_DEFAULT_MODEL || defaults.defaultModel;
-  const baseUrl = dbCfg.llm_base_url || defaults.baseUrl;
+  const model   = dbCfg.llm_model   || process.env.POLICYLOCAL_DEFAULT_MODEL || defaults.defaultModel;
+  // Alibaba uses workspace-specific endpoint from env
+  const baseUrl = dbCfg.llm_base_url
+    || (provider === 'alibaba' ? process.env.ALIBABA_BASE_URL || defaults.baseUrl : defaults.baseUrl);
 
   return { provider, apiKey, model, baseUrl };
 }

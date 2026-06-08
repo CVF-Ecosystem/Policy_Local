@@ -31,9 +31,10 @@ const PROVIDER_MODELS: Record<string, [string, string][]> = {
     ['deepseek-reasoner','DeepSeek Reasoner'],
   ],
   alibaba: [
-    ['qwen-plus',        'Qwen Plus — cân bằng'],
-    ['qwen-max',         'Qwen Max — mạnh nhất'],
-    ['qwen-turbo',       'Qwen Turbo — nhanh'],
+    ['qwen-turbo',              'Qwen Turbo — 381ms ⚡'],
+    ['deepseek-v4-flash',       'DeepSeek V4 Flash — 1.3s'],
+    ['qwen3.6-plus',            'Qwen3.6 Plus — 3.8s'],
+    ['qwen3.7-plus',            'Qwen3.7 Plus — mạnh nhất'],
   ],
   anthropic: [
     ['claude-haiku-4-5-20251001', 'Haiku 4.5 — nhanh, rẻ'],
