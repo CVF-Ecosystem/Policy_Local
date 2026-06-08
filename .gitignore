@@ -4,15 +4,15 @@ CVF_*.md
 CLAUDE_*.md
 
 # Prototype source files (already ported to apps/)
-app.html
-app.jsx
-landing.html
-tweaks-panel.jsx
-components/
-styles/
-data/
-data_input/
-scripts/
+/app.html
+/app.jsx
+/landing.html
+/tweaks-panel.jsx
+/components/
+/styles/
+/data/
+/data_input/
+/scripts/
 
 # Node
 node_modules/
